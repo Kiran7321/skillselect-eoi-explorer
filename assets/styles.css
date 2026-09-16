@@ -86,8 +86,28 @@ aside.sidebar {
 
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; }
 .sidebar-head h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-faint); margin: 0; }
+.sidebar-head-actions { display: flex; align-items: center; gap: 14px; }
 .clear-btn { font-size: 12px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
 .clear-btn:hover { text-decoration: underline; }
+.sidebar-close {
+  display: none; background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text-dim);
+  width: 30px; height: 30px; border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer;
+}
+.sidebar-close:hover { color: var(--text); }
+
+.filters-toggle {
+  display: none; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 8px;
+  background: var(--bg-elev-2); border: 1px solid var(--border); color: var(--text); font-size: 13px;
+  font-weight: 600; cursor: pointer;
+}
+.filters-toggle:hover { border-color: var(--accent-dim); }
+.filters-toggle-badge {
+  font-size: 11px; font-weight: 700; color: #fff; background: var(--accent);
+  border-radius: 999px; padding: 1px 7px; min-width: 16px; text-align: center;
+}
+.sidebar-backdrop {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 40;
+}
 
 .filter-group {
   border: 1px solid var(--border);
@@ -122,26 +142,28 @@ aside.sidebar {
 }
 .filter-group[open] summary .summary-preview { display: none; }
 
-.filter-body { padding: 8px 12px 12px; border-top: 1px solid var(--border); }
+.filter-body { padding: 10px 12px 12px; border-top: 1px solid var(--border); }
 .filter-search {
-  width: 100%; padding: 6px 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text); font-size: 12.5px;
+  width: 100%; padding: 9px 10px; margin-bottom: 8px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13.5px;
 }
 .filter-search:focus { outline: none; border-color: var(--accent); }
 
-.filter-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.filter-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; -webkit-overflow-scrolling: touch; }
 .filter-item {
-  display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 12.5px;
+  display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 7px; cursor: pointer;
+  font-size: 13.5px; min-height: 40px;
 }
 .filter-item:hover { background: var(--bg-elev); }
-.filter-item input { accent-color: var(--accent); }
+.filter-item:has(input:checked) { background: var(--accent-dim); }
+.filter-item input { accent-color: var(--accent); width: 17px; height: 17px; flex-shrink: 0; }
 .filter-item .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .filter-item .n { color: var(--text-faint); font-variant-numeric: tabular-nums; font-size: 11px; }
 
 .filter-actions { display: flex; gap: 8px; margin-top: 6px; }
 .mini-btn {
-  font-size: 11px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 3px 8px; cursor: pointer;
+  font-size: 12px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 12px; cursor: pointer; min-height: 32px;
 }
 .mini-btn:hover { color: var(--text); border-color: var(--accent-dim); }
 
@@ -174,10 +196,54 @@ main.content { grid-area: main; padding: 20px 24px; overflow-y: auto; max-height
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+@media (max-width: 1100px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Below this width the sidebar becomes an off-canvas drawer: fixed to the
+   viewport, hidden via translateX until toggled open, with a backdrop that
+   closes it on click. Below 980px there just isn't room for a permanent
+   300px-wide sidebar next to readable content. */
 @media (max-width: 980px) {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
   #app { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
-  aside.sidebar { display: none; }
+  main.content { max-height: none; }
+
+  .filters-toggle { display: inline-flex; }
+  .sidebar-close { display: inline-flex; align-items: center; justify-content: center; }
+
+  aside.sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: min(340px, 86vw);
+    max-height: none;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 24px rgba(0,0,0,0.4);
+  }
+  aside.sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop:not([hidden]) { display: block; }
+  body.drawer-open { overflow: hidden; }
+}
+
+@media (max-width: 720px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  header.topbar { padding: 12px 16px; }
+  main.content { padding: 16px; }
+  .brand p { display: none; }
+  .tabs { order: 3; width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  .tab-btn { flex-shrink: 0; }
+  #lastUpdated { display: none; }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 460px) {
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { padding: 10px 12px; }
+  .stat-card .value { font-size: 18px; }
+  .topbar-right { gap: 10px; }
+  .status-pill { display: none; }
 }
 
 table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }

@@ -131,7 +131,12 @@
 
     const head = document.createElement('div');
     head.className = 'sidebar-head';
-    head.innerHTML = `<h2>Filters</h2><button class="clear-btn" id="clearFiltersBtn">Clear all</button>`;
+    head.innerHTML = `
+      <h2>Filters</h2>
+      <div class="sidebar-head-actions">
+        <button class="clear-btn" id="clearFiltersBtn">Clear all</button>
+        <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close filters">&times;</button>
+      </div>`;
     sidebar.appendChild(head);
 
     if (state.tab === 'trends') {
@@ -157,7 +162,30 @@
       renderSidebar();
       triggerRender();
     });
+    document.getElementById('sidebarCloseBtn').addEventListener('click', closeFilterDrawer);
+
+    updateFiltersToggleBadge();
   }
+
+  function updateFiltersToggleBadge() {
+    const count = fieldsForTab(state.tab).reduce((n, f) => n + state.filters[state.tab][f].size, 0);
+    const badge = document.getElementById('filtersToggleBadge');
+    badge.hidden = count === 0;
+    badge.textContent = count;
+  }
+
+  function openFilterDrawer() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').hidden = false;
+    document.body.classList.add('drawer-open');
+  }
+  function closeFilterDrawer() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').hidden = true;
+    document.body.classList.remove('drawer-open');
+  }
+  document.getElementById('filtersToggle').addEventListener('click', openFilterDrawer);
+  document.getElementById('sidebarBackdrop').addEventListener('click', closeFilterDrawer);
 
   function buildMonthRangeControl() {
     const wrap = document.createElement('details');
@@ -278,6 +306,7 @@
         badge.style.display = selected.size ? '' : 'none';
         badge.textContent = selected.size;
         updatePreview();
+        updateFiltersToggleBadge();
         triggerRender();
       });
       const lbl = document.createElement('span');
@@ -312,6 +341,7 @@
       badge.style.display = selected.size ? '' : 'none';
       badge.textContent = selected.size;
       updatePreview();
+      updateFiltersToggleBadge();
       triggerRender();
     });
 
