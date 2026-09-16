@@ -99,20 +99,28 @@ aside.sidebar {
   list-style: none;
   cursor: pointer;
   padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   font-size: 13px;
   font-weight: 600;
   user-select: none;
 }
 .filter-group summary::-webkit-details-marker { display: none; }
+.filter-group summary .summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .filter-group summary .count-badge {
   font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-dim);
   border-radius: 999px; padding: 1px 8px; min-width: 18px; text-align: center;
 }
-.filter-group summary .chev { color: var(--text-faint); transition: transform 0.15s; margin-left: 6px; }
+.filter-group summary .chev { color: var(--text-faint); transition: transform 0.15s; margin-left: 6px; flex-shrink: 0; }
 .filter-group[open] summary .chev { transform: rotate(90deg); }
+.filter-group summary .summary-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-group summary .summary-preview {
+  margin-top: 4px; font-size: 11px; color: var(--accent); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.filter-group[open] summary .summary-preview { display: none; }
 
 .filter-body { padding: 8px 12px 12px; border-top: 1px solid var(--border); }
 .filter-search {
@@ -139,6 +147,15 @@ aside.sidebar {
 
 main.content { grid-area: main; padding: 20px 24px; overflow-y: auto; max-height: calc(100vh - 57px); }
 
+.scope-banner {
+  font-size: 12px; color: var(--text-dim); background: var(--bg-elev);
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; line-height: 1.5;
+}
+.panel-note {
+  font-size: 11.5px; color: var(--text-dim); background: var(--bg);
+  border-radius: 6px; padding: 7px 10px; margin-bottom: 10px; line-height: 1.5;
+}
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .stat-card {
   background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius);

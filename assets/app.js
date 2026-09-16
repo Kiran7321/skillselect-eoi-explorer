@@ -198,10 +198,18 @@
 
     const details = document.createElement('details');
     details.className = 'filter-group';
-    details.open = items.length <= 12;
+    details.open = false; // always start collapsed — keeps the sidebar short and scannable
 
+    // Everything but <summary> is hidden by the browser natively while a
+    // <details> is closed, no matter what CSS says — so the "which values
+    // are selected" preview has to live INSIDE summary, as a second row
+    // under the name/badge/chevron line, not as a sibling of it.
     const summary = document.createElement('summary');
-    summary.innerHTML = `<span>${meta.label}</span>`;
+    const summaryTop = document.createElement('div');
+    summaryTop.className = 'summary-top';
+    const nameWrap = document.createElement('span');
+    nameWrap.className = 'summary-name';
+    nameWrap.textContent = meta.label;
     const badge = document.createElement('span');
     badge.className = 'count-badge';
     badge.style.display = selected.size ? '' : 'none';
@@ -209,26 +217,47 @@
     const chev = document.createElement('span');
     chev.className = 'chev';
     chev.textContent = '›';
-    summary.appendChild(badge);
-    summary.appendChild(chev);
+    summaryTop.appendChild(nameWrap);
+    summaryTop.appendChild(badge);
+    summaryTop.appendChild(chev);
+    summary.appendChild(summaryTop);
+
+    // When collapsed, show which values are picked right under the header
+    // so you don't have to open every group to remember what's filtered.
+    const dimMap = new Map(items.map((it) => [it.id, it.label]));
+    const preview = document.createElement('div');
+    preview.className = 'summary-preview';
+    function updatePreview() {
+      if (!selected.size) { preview.textContent = ''; preview.hidden = true; return; }
+      preview.hidden = false;
+      const names = [...selected].slice(0, 3).map((id) => dimMap.get(id)).join(', ');
+      preview.textContent = names + (selected.size > 3 ? ` +${selected.size - 3} more` : '');
+    }
+    updatePreview();
+    summary.appendChild(preview);
     details.appendChild(summary);
 
     const body = document.createElement('div');
     body.className = 'filter-body';
 
-    if (SEARCHABLE.has(field) || items.length > 15) {
-      const search = document.createElement('input');
-      search.type = 'text';
-      search.placeholder = `Search ${meta.label.toLowerCase()}…`;
-      search.className = 'filter-search';
-      body.appendChild(search);
-      search.addEventListener('input', () => {
-        const term = search.value.trim().toLowerCase();
-        list.querySelectorAll('.filter-item').forEach((el) => {
-          el.style.display = el.dataset.label.includes(term) ? '' : 'none';
-        });
-      });
+    if (field === 'score') {
+      const note = document.createElement('div');
+      note.className = 'panel-note';
+      note.textContent = 'Skilled visas use a 0–130 scale. Values above 130 are Business Innovation & Investment visas (132/188), a separate unrelated scale.';
+      body.appendChild(note);
     }
+
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.placeholder = `Search ${meta.label.toLowerCase()}…`;
+    search.className = 'filter-search';
+    body.appendChild(search);
+    search.addEventListener('input', () => {
+      const term = search.value.trim().toLowerCase();
+      list.querySelectorAll('.filter-item').forEach((el) => {
+        el.style.display = el.dataset.label.includes(term) ? '' : 'none';
+      });
+    });
 
     const actions = document.createElement('div');
     actions.className = 'filter-actions';
@@ -248,6 +277,7 @@
         if (cb.checked) selected.add(item.id); else selected.delete(item.id);
         badge.style.display = selected.size ? '' : 'none';
         badge.textContent = selected.size;
+        updatePreview();
         triggerRender();
       });
       const lbl = document.createElement('span');
@@ -281,6 +311,7 @@
       });
       badge.style.display = selected.size ? '' : 'none';
       badge.textContent = selected.size;
+      updatePreview();
       triggerRender();
     });
 
@@ -402,12 +433,15 @@
 
     const statRow = document.createElement('div');
     statRow.className = 'stat-row';
-    statRow.appendChild(statCard('Total EOIs (matched)', fmtRaw(totalRow.total || 0), `${byMonth.length} monthly snapshots`));
+    statRow.appendChild(statCard('Total EOIs (matched)', fmtRaw(totalRow.total || 0), `summed across ${byMonth.length} monthly snapshots`));
     statRow.appendChild(statCard('Distinct combinations', fmtRaw(totalRow.combos || 0), 'visa × status × occupation × state × score'));
     statRow.appendChild(statCard('Top visa type', byVisa[0] ? byVisa[0].label.slice(0, 22) : '—', byVisa[0] ? `${fmtRaw(byVisa[0].total)} EOIs` : ''));
-    statRow.appendChild(statCard('Top nominated state', byState[0] ? byState[0].label : '—', byState[0] ? `${fmtRaw(byState[0].total)} EOIs` : ''));
+    statRow.appendChild(statCard('Top nominated state', byState[0] ? explainStateLabel(byState[0].label) : '—', byState[0] ? `${fmtRaw(byState[0].total)} EOIs` : ''));
 
     if (chips) el.appendChild(chips);
+    el.appendChild(scopeBanner(
+      'These totals are summed across every matching month in the selected range — the same EOI can be counted in multiple monthly snapshots. Switch to “Latest Snapshot” for a single-point-in-time count.'
+    ));
     el.appendChild(statRow);
 
     const trendPanel = panel('EOIs over time', 'Sum of matching EOIs per snapshot month');
@@ -424,13 +458,16 @@
     grid.className = 'grid-3';
     grid.appendChild(breakdownPanel('By Visa Type', byVisa));
     grid.appendChild(breakdownPanel('By EOI Status', byStatus, true));
-    grid.appendChild(breakdownPanel('By Nominated State', byState));
+    grid.appendChild(breakdownPanel('By Nominated State', explainStateRows(byState)));
     el.appendChild(grid);
 
     const grid2 = document.createElement('div');
     grid2.className = 'grid-2';
     grid2.appendChild(breakdownPanel('Top Occupations', topOcc));
-    grid2.appendChild(breakdownPanel('By Points Score', byScore, false, true));
+    grid2.appendChild(breakdownPanel(
+      'By Points Score', byScore, false, true,
+      'Skilled visas (189/190/491/etc) use the General Skilled Migration points test, max 130. Scores above that belong to Business Innovation & Investment visas (132/188 series), which use a separate, unrelated points scale.'
+    ));
     el.appendChild(grid2);
   }
 
@@ -467,6 +504,7 @@
     statRow.appendChild(statCard('Top occupation', topOcc[0] ? topOcc[0].label.slice(0, 26) : '—', topOcc[0] ? `${fmtRaw(topOcc[0].total)} EOIs` : ''));
 
     if (chips) el.appendChild(chips);
+    el.appendChild(scopeBanner(`This is a single point-in-time count as at ${state.latestMonth} — nothing is summed across months.`));
     el.appendChild(statRow);
 
     const monthPanel = panel('EOIs by month submitted', 'How far back the matching EOIs were lodged');
@@ -482,7 +520,7 @@
     grid.className = 'grid-3';
     grid.appendChild(breakdownPanel('By Visa Type', byVisa));
     grid.appendChild(breakdownPanel('By EOI Status', byStatus, true));
-    grid.appendChild(breakdownPanel('By Nominated State', byState));
+    grid.appendChild(breakdownPanel('By Nominated State', explainStateRows(byState)));
     el.appendChild(grid);
 
     const grid2 = document.createElement('div');
@@ -494,6 +532,29 @@
   }
 
   // ---------- Small UI helpers ----------
+
+  // A handful of Nominated State values aren't actual states — they mean
+  // "no state nomination applies to this visa" in various source-system
+  // spellings. Spelling them out avoids them reading as missing/broken data.
+  const STATE_EXPLAIN = {
+    'N/A': 'N/A — no state nomination',
+    '-': 'None recorded',
+    'ANY': 'Any state (no preference)',
+    'AUSTRADE': 'Austrade-sponsored',
+  };
+  function explainStateLabel(label) {
+    return STATE_EXPLAIN[label] || label;
+  }
+  function explainStateRows(rows) {
+    return rows.map((r) => ({ ...r, label: explainStateLabel(r.label) }));
+  }
+
+  function scopeBanner(text) {
+    const d = document.createElement('div');
+    d.className = 'scope-banner';
+    d.textContent = text;
+    return d;
+  }
 
   function statCard(label, value, sub) {
     const d = document.createElement('div');
@@ -516,10 +577,19 @@
 
   const STATUS_CLASS = { LODGED: 'status-lodged', INVITED: 'status-invited', SUSPENDED: 'status-suspended', WITHDRAWN: 'status-withdrawn' };
 
-  function breakdownPanel(title, rows, isStatus, isScore) {
+  function breakdownPanel(title, rows, isStatus, isScore, note) {
     const p = panel(title, `${rows.length} shown`);
+    if (note) {
+      const noteEl = document.createElement('div');
+      noteEl.className = 'panel-note';
+      noteEl.textContent = note;
+      p.body.appendChild(noteEl);
+    }
     if (!rows.length) {
-      p.body.innerHTML = '<div class="empty-state">No matching data</div>';
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No matching data';
+      p.body.appendChild(empty);
       return p.el;
     }
     const max = Math.max(...rows.map((r) => r.total || 0), 1);
