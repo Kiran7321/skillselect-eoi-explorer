@@ -25,20 +25,27 @@
       <button class="tab-btn" data-tab="about">About &amp; Data</button>
     </div>
     <div class="topbar-right">
-      <button class="filters-toggle" id="filtersToggle" type="button" aria-label="Show filters">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-        Filters
-        <span class="filters-toggle-badge" id="filtersToggleBadge" hidden>0</span>
-      </button>
       <span class="status-pill" id="dbStatus"><span class="dot"></span><span id="dbStatusText">Loading database&hellip;</span></span>
       <span id="lastUpdated"></span>
     </div>
   </header>
 
-  <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
-  <aside class="sidebar" id="sidebar"></aside>
+  <section class="filters-panel" id="filtersPanel">
+    <div class="filters-panel-head">
+      <div>
+        <h2>Filters</h2>
+        <p id="filtersPanelSub">Combine as many of these as you want &mdash; every field is filterable at once.</p>
+      </div>
+      <div class="filters-panel-actions">
+        <span class="active-count" id="activeCount" hidden></span>
+        <button class="clear-btn" id="clearFiltersBtn">Clear all</button>
+        <a class="jump-link" href="#results">See results &darr;</a>
+      </div>
+    </div>
+    <div class="filters-grid" id="filtersGrid"></div>
+  </section>
 
-  <main class="content">
+  <main class="content" id="results">
     <section id="view-trends"></section>
     <section id="view-snapshot" hidden></section>
     <section id="view-about" hidden></section>

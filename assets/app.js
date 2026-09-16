@@ -119,41 +119,34 @@
     state.monthRange.toIdx = state.dims.as_at_month.length - 1;
   }
 
-  // ---------- Sidebar ----------
+  // ---------- Filters panel ----------
+  // Filtering is this app's whole reason to exist (the source dashboard caps
+  // you at ~2 fields at once), so every filter group is a plain, always-
+  // expanded card — nothing to click open, nothing hidden behind a drawer.
 
   function fieldsForTab(tab) {
     return tab === 'trends' ? TRENDS_FIELDS : SNAPSHOT_FIELDS;
   }
 
   function renderSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.innerHTML = '';
+    const grid = document.getElementById('filtersGrid');
+    grid.innerHTML = '';
 
-    const head = document.createElement('div');
-    head.className = 'sidebar-head';
-    head.innerHTML = `
-      <h2>Filters</h2>
-      <div class="sidebar-head-actions">
-        <button class="clear-btn" id="clearFiltersBtn">Clear all</button>
-        <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close filters">&times;</button>
-      </div>`;
-    sidebar.appendChild(head);
+    const sub = document.getElementById('filtersPanelSub');
+    if (state.tab === 'trends') {
+      sub.textContent = 'Combine as many of these as you want, across every monthly snapshot — every field is filterable at once.';
+    } else {
+      sub.innerHTML = `Every field the source exposes, as at <strong style="color:var(--text)">${state.latestMonth}</strong> (latest month only).`;
+    }
 
     if (state.tab === 'trends') {
-      sidebar.appendChild(buildMonthRangeControl());
-    } else {
-      const snapNote = document.createElement('div');
-      snapNote.className = 'filter-group';
-      snapNote.style.cssText = 'padding:10px 12px; font-size:12px; color:var(--text-dim);';
-      snapNote.innerHTML = `Snapshot as at <strong style="color:var(--text)">${state.latestMonth}</strong> &mdash; every field available, latest month only.`;
-      sidebar.appendChild(snapNote);
+      grid.appendChild(buildMonthRangeCard());
     }
-
     for (const field of fieldsForTab(state.tab)) {
-      sidebar.appendChild(buildFilterGroup(field));
+      grid.appendChild(buildFilterCard(field));
     }
 
-    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+    document.getElementById('clearFiltersBtn').onclick = () => {
       fieldsForTab(state.tab).forEach((f) => state.filters[state.tab][f].clear());
       if (state.tab === 'trends') {
         state.monthRange.fromIdx = 0;
@@ -161,109 +154,64 @@
       }
       renderSidebar();
       triggerRender();
-    });
-    document.getElementById('sidebarCloseBtn').addEventListener('click', closeFilterDrawer);
+    };
 
-    updateFiltersToggleBadge();
+    updateActiveCount();
   }
 
-  function updateFiltersToggleBadge() {
+  function updateActiveCount() {
     const count = fieldsForTab(state.tab).reduce((n, f) => n + state.filters[state.tab][f].size, 0);
-    const badge = document.getElementById('filtersToggleBadge');
-    badge.hidden = count === 0;
-    badge.textContent = count;
+    const el = document.getElementById('activeCount');
+    el.hidden = count === 0;
+    el.textContent = `${count} filter${count === 1 ? '' : 's'} active`;
   }
 
-  function openFilterDrawer() {
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('sidebarBackdrop').hidden = false;
-    document.body.classList.add('drawer-open');
-  }
-  function closeFilterDrawer() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarBackdrop').hidden = true;
-    document.body.classList.remove('drawer-open');
-  }
-  document.getElementById('filtersToggle').addEventListener('click', openFilterDrawer);
-  document.getElementById('sidebarBackdrop').addEventListener('click', closeFilterDrawer);
-
-  function buildMonthRangeControl() {
-    const wrap = document.createElement('details');
-    wrap.className = 'filter-group';
-    wrap.open = true;
+  function buildMonthRangeCard() {
+    const card = document.createElement('div');
+    card.className = 'filter-card month-range-card';
     const opts = state.months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-    wrap.innerHTML = `
-      <summary>As At Month range <span class="chev">&rsaquo;</span></summary>
+    card.innerHTML = `
+      <div class="filter-card-head"><span>As At Month range</span></div>
       <div class="filter-body">
-        <label style="font-size:11px;color:var(--text-faint);">From</label>
-        <select id="monthFrom" class="filter-search" style="margin-bottom:8px;">${opts}</select>
-        <label style="font-size:11px;color:var(--text-faint);">To</label>
-        <select id="monthTo" class="filter-search">${opts}</select>
+        <div class="range-field"><label>From</label><select id="monthFrom">${opts}</select></div>
+        <div class="range-field"><label>To</label><select id="monthTo">${opts}</select></div>
       </div>`;
-    queueMicrotask(() => {
-      const fromSel = wrap.querySelector('#monthFrom');
-      const toSel = wrap.querySelector('#monthTo');
-      fromSel.value = state.monthRange.fromIdx;
-      toSel.value = state.monthRange.toIdx;
-      fromSel.addEventListener('change', () => {
-        state.monthRange.fromIdx = Number(fromSel.value);
-        if (state.monthRange.fromIdx > state.monthRange.toIdx) { state.monthRange.toIdx = state.monthRange.fromIdx; toSel.value = state.monthRange.toIdx; }
-        triggerRender();
-      });
-      toSel.addEventListener('change', () => {
-        state.monthRange.toIdx = Number(toSel.value);
-        if (state.monthRange.toIdx < state.monthRange.fromIdx) { state.monthRange.fromIdx = state.monthRange.toIdx; fromSel.value = state.monthRange.fromIdx; }
-        triggerRender();
-      });
+    const fromSel = card.querySelector('#monthFrom');
+    const toSel = card.querySelector('#monthTo');
+    fromSel.value = state.monthRange.fromIdx;
+    toSel.value = state.monthRange.toIdx;
+    fromSel.addEventListener('change', () => {
+      state.monthRange.fromIdx = Number(fromSel.value);
+      if (state.monthRange.fromIdx > state.monthRange.toIdx) { state.monthRange.toIdx = state.monthRange.fromIdx; toSel.value = state.monthRange.toIdx; }
+      triggerRender();
     });
-    return wrap;
+    toSel.addEventListener('change', () => {
+      state.monthRange.toIdx = Number(toSel.value);
+      if (state.monthRange.toIdx < state.monthRange.fromIdx) { state.monthRange.fromIdx = state.monthRange.toIdx; fromSel.value = state.monthRange.fromIdx; }
+      triggerRender();
+    });
+    return card;
   }
 
-  function buildFilterGroup(field) {
+  function buildFilterCard(field) {
     const meta = FIELD_META[field];
     const items = state.dims[field] || [];
     const selected = state.filters[state.tab][field];
 
-    const details = document.createElement('details');
-    details.className = 'filter-group';
-    details.open = false; // always start collapsed — keeps the sidebar short and scannable
+    const card = document.createElement('div');
+    card.className = 'filter-card';
 
-    // Everything but <summary> is hidden by the browser natively while a
-    // <details> is closed, no matter what CSS says — so the "which values
-    // are selected" preview has to live INSIDE summary, as a second row
-    // under the name/badge/chevron line, not as a sibling of it.
-    const summary = document.createElement('summary');
-    const summaryTop = document.createElement('div');
-    summaryTop.className = 'summary-top';
+    const head = document.createElement('div');
+    head.className = 'filter-card-head';
     const nameWrap = document.createElement('span');
-    nameWrap.className = 'summary-name';
     nameWrap.textContent = meta.label;
     const badge = document.createElement('span');
     badge.className = 'count-badge';
     badge.style.display = selected.size ? '' : 'none';
     badge.textContent = selected.size;
-    const chev = document.createElement('span');
-    chev.className = 'chev';
-    chev.textContent = '›';
-    summaryTop.appendChild(nameWrap);
-    summaryTop.appendChild(badge);
-    summaryTop.appendChild(chev);
-    summary.appendChild(summaryTop);
-
-    // When collapsed, show which values are picked right under the header
-    // so you don't have to open every group to remember what's filtered.
-    const dimMap = new Map(items.map((it) => [it.id, it.label]));
-    const preview = document.createElement('div');
-    preview.className = 'summary-preview';
-    function updatePreview() {
-      if (!selected.size) { preview.textContent = ''; preview.hidden = true; return; }
-      preview.hidden = false;
-      const names = [...selected].slice(0, 3).map((id) => dimMap.get(id)).join(', ');
-      preview.textContent = names + (selected.size > 3 ? ` +${selected.size - 3} more` : '');
-    }
-    updatePreview();
-    summary.appendChild(preview);
-    details.appendChild(summary);
+    head.appendChild(nameWrap);
+    head.appendChild(badge);
+    card.appendChild(head);
 
     const body = document.createElement('div');
     body.className = 'filter-body';
@@ -305,8 +253,7 @@
         if (cb.checked) selected.add(item.id); else selected.delete(item.id);
         badge.style.display = selected.size ? '' : 'none';
         badge.textContent = selected.size;
-        updatePreview();
-        updateFiltersToggleBadge();
+        updateActiveCount();
         triggerRender();
       });
       const lbl = document.createElement('span');
@@ -318,7 +265,7 @@
       list.appendChild(row);
     }
     body.appendChild(list);
-    details.appendChild(body);
+    card.appendChild(body);
 
     actions.addEventListener('click', (e) => {
       const act = e.target.dataset.act;
@@ -340,12 +287,11 @@
       });
       badge.style.display = selected.size ? '' : 'none';
       badge.textContent = selected.size;
-      updatePreview();
-      updateFiltersToggleBadge();
+      updateActiveCount();
       triggerRender();
     });
 
-    return details;
+    return card;
   }
 
   // ---------- WHERE builder ----------
@@ -751,8 +697,13 @@
     document.getElementById('view-trends').hidden = tab !== 'trends';
     document.getElementById('view-snapshot').hidden = tab !== 'snapshot';
     document.getElementById('view-about').hidden = tab !== 'about';
-    if (tab === 'trends' || tab === 'snapshot') renderSidebar();
-    else document.getElementById('sidebar').innerHTML = '<div class="filter-group" style="padding:12px; font-size:12.5px; color:var(--text-dim);">No filters on this tab.</div>';
+    const filtersPanel = document.getElementById('filtersPanel');
+    if (tab === 'trends' || tab === 'snapshot') {
+      filtersPanel.hidden = false;
+      renderSidebar();
+    } else {
+      filtersPanel.hidden = true;
+    }
     triggerRender();
   }
 
