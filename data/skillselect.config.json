@@ -1,0 +1,12 @@
+{
+  "from": "inline",
+  "config": {
+    "serverMode": "chunked",
+    "requestChunkSize": 4096,
+    "urlPrefix": "data/skillselect.sqlite3.part",
+    "serverChunkSize": 20971520,
+    "databaseLengthBytes": 171114496,
+    "suffixLength": 4,
+    "cacheBust": "manual-verify-1"
+  }
+}
